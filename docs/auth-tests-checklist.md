@@ -10,39 +10,39 @@ Objetivo del hito: cerrar el módulo de autenticación y la integración de prue
 
 ## Definition of Done (DoD)
 
-- [ ] Login válido retorna access token y refresh token.
-- [ ] Login inválido retorna error controlado (credenciales incorrectas).
-- [ ] Logout invalida la sesión activa.
-- [ ] Renew session rota token o renueva sesión correctamente.
-- [ ] Middleware auth protege rutas privadas y rechaza token inválido/expirado.
-- [ ] Validaciones de entrada cubren casos inválidos (body/params).
-- [ ] Errores se devuelven con formato consistente de API.
-- [ ] Tests de integración de auth pasan en local.
-- [ ] Tests unitarios de servicios auth/session pasan en local.
-- [ ] `pnpm test` sin fallos críticos del módulo auth/users.
+- [x] Login válido retorna access token y refresh token.
+- [x] Login inválido retorna error controlado (credenciales incorrectas).
+- [x] Logout invalida la sesión activa.
+- [x] Renew session rota token o renueva sesión correctamente.
+- [x] Middleware auth protege rutas privadas y rechaza token inválido/expirado.
+- [x] Validaciones de entrada cubren casos inválidos (body/params).
+- [x] Errores se devuelven con formato consistente de API.
+- [x] Tests de integración de auth pasan en local.
+- [x] Tests unitarios de servicios auth/session pasan en local.
+- [x] `pnpm test` sin fallos críticos del módulo auth/users.
 
 ## Pruebas mínimas sugeridas
 
 ### Integración (API)
-- [ ] `POST /api/auth/login` éxito.
-- [ ] `POST /api/auth/login` credenciales inválidas.
-- [ ] `POST /api/auth/logout` con token válido.
-- [ ] `POST /api/auth/logout` sin token.
-- [ ] `POST /api/auth/renew-session` éxito.
-- [ ] `POST /api/auth/renew-session` token inválido/expirado.
+- [x] `POST /api/auth/login` éxito.
+- [x] `POST /api/auth/login` credenciales inválidas.
+- [x] `POST /api/auth/logout` con token válido.
+- [x] `POST /api/auth/logout` sin token.
+- [x] `POST /api/auth/renew-session` éxito.
+- [x] `POST /api/auth/renew-session` token inválido/expirado.
 
 ### Unitarias
-- [ ] `auth.service` (login, logout, renewSession).
-- [ ] `session.repository` (crear, invalidar, buscar sesión activa).
-- [ ] `token-manager.service` (sign/verify).
-- [ ] `hasher.service` (hash/compare).
+- [x] `auth.service` (login, logout, renewSession).
+- [x] `session.repository` (crear, invalidar, buscar sesión activa).
+- [x] `token-manager.service` (sign/verify).
+- [x] `hasher.service` (hash/compare).
 
 ## Criterios de calidad
 
-- [ ] Convenciones de commit: `feat|fix|test|chore(scope): mensaje`.
-- [ ] Sin secretos en commits.
-- [ ] `.env.example` consistente con variables usadas en código.
-- [ ] README no promete funcionalidades no implementadas.
+- [x] Convenciones de commit: `feat|fix|test|chore(scope): mensaje`.
+- [x] Sin secretos en commits.
+- [x] `.env.example` consistente con variables usadas en código.
+- [x] README no promete funcionalidades no implementadas.
 
 ## Cierre de versión para este hito
 

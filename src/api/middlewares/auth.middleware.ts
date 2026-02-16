@@ -24,10 +24,7 @@ export const createAuthMiddleware =
 					code: "TOKEN_NOT_PROVIDED",
 				});
 			}
-			const decoded = tokenManager.verify(
-				token,
-				config.accessTokenSecret,
-			);
+			const decoded = tokenManager.verify(token, config.accessTokenSecret);
 			req.userId = (decoded as JwtPayload).sub as string;
 			req.jti = (decoded as JwtPayload).jti as string;
 			next();
