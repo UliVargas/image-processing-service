@@ -1,0 +1,46 @@
+@baseUrl = http://localhost:3000
+@email = "usuario@correo.com"
+@username = "usuario"
+@password = "password123"
+@name = "John Doe"
+@accessToken = {{login.response.body.$.data.tokens.accessToken}}
+
+
+### Login (ejecuta primero)
+# @name login
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+content-type: application/json
+
+{
+    "email": "{{email}}",
+	"password": "{{password}}"
+}
+
+### Crear usuario
+POST {{baseUrl}}/api/users HTTP/1.1
+content-type: application/json
+
+{
+    "email": "{{email}}",
+	"password": "{{password}}",
+	"username": "{{username}}"
+}
+
+### Obtener usuarios
+GET {{baseUrl}}/api/users HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### Actualizar usuario
+PATCH {{baseUrl}}/api/users/xe0fm97fitktz7tkgfvxlpe9 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+	"name": "{{name}}"
+}
+
+### Eliminar usuario
+DELETE {{baseUrl}}/api/users/xe0fm97fitktz7tkgfvxlpe9 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}

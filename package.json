@@ -1,0 +1,85 @@
+{
+	"name": "image-processing-service",
+	"version": "1.0.0",
+	"description": "Backend API for authentication, user management, and image-processing workflows with Node.js, TypeScript, Prisma, and Docker.",
+	"keywords": [
+		"nodejs",
+		"typescript",
+		"express",
+		"prisma",
+		"postgresql",
+		"jwt",
+		"image-processing",
+		"sharp"
+	],
+	"author": "UliVargas",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:UliVargas/image-processing-service.git"
+	},
+	"bugs": {
+		"url": "https://github.com/UliVargas/image-processing-service/issues"
+	},
+	"homepage": "https://github.com/UliVargas/image-processing-service#readme",
+	"engines": {
+		"node": ">=20"
+	},
+	"main": "index.js",
+	"scripts": {
+		"dev": "nodemon",
+		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+		"start": "node dist/index.js",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"test:coverage": "vitest run --coverage",
+		"test:unit": "vitest tests/unit",
+		"test:integration": "vitest tests/integration",
+		"prisma:generate": "prisma generate",
+		"prisma:migrate": "prisma migrate dev",
+		"prisma:studio": "prisma studio"
+	},
+	"type": "commonjs",
+	"devDependencies": {
+		"@biomejs/biome": "2.3.14",
+		"@faker-js/faker": "^10.2.0",
+		"@types/compression": "^1.8.1",
+		"@types/cors": "^2.8.19",
+		"@types/express": "^5.0.6",
+		"@types/jsonwebtoken": "^9.0.10",
+		"@types/morgan": "^1.9.10",
+		"@types/supertest": "^6.0.3",
+		"nodemon": "^3.1.11",
+		"prisma": "^7.3.0",
+		"supertest": "^7.2.2",
+		"ts-node": "^10.9.2",
+		"tsc-alias": "^1.8.16",
+		"tsconfig-paths": "^4.2.0",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3",
+		"vite-tsconfig-paths": "^6.0.5",
+		"vitest": "^4.0.18"
+	},
+	"dependencies": {
+		"@paralleldrive/cuid2": "^3.3.0",
+		"@prisma/adapter-pg": "^7.3.0",
+		"@prisma/client": "^7.3.0",
+		"@valibot/i18n": "^1.0.0",
+		"awilix": "^12.0.5",
+		"awilix-express": "^9.0.2",
+		"bcryptjs": "^3.0.3",
+		"compression": "^1.8.1",
+		"cors": "^2.8.6",
+		"dayjs": "^1.11.19",
+		"dotenv": "^17.2.4",
+		"express": "^5.2.1",
+		"express-rate-limit": "^8.2.1",
+		"helmet": "^8.1.0",
+		"jsonwebtoken": "^9.0.3",
+		"morgan": "^1.10.1",
+		"multer": "^2.0.2",
+		"pg": "^8.18.0",
+		"sharp": "^0.34.5",
+		"valibot": "^1.2.0"
+	}
+}

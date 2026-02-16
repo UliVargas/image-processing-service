@@ -1,0 +1,38 @@
+@baseUrl = http://localhost:3000
+@accessToken = {{login.response.body.$.data.tokens.accessToken}}
+@refreshToken = {{login.response.body.$.data.tokens.refreshToken}}
+
+
+### Iniciar sesión (con email)
+# @name login
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+content-type: application/json
+
+{
+    "email": "otro@gmail.com",
+	"password": "password123"
+}
+
+### Iniciar sesión (con username)
+POST {{baseUrl}}/api/auth/login HTTP/1.1
+content-type: application/json
+
+{
+    "username": "ulivargas",
+	"password": "password123"
+}
+
+### Renovar sesión
+# @name renew-session
+POST {{baseUrl}}/api/auth/renew-session HTTP/1.1
+content-type: application/json
+
+{
+    "refreshToken": "{{refreshToken}}"
+}
+
+### Cerrar Sesion
+POST {{baseUrl}}/api/auth/logout HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+

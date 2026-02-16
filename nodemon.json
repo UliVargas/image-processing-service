@@ -1,0 +1,9 @@
+{
+	"watch": ["src", ".env", "prisma/schema.prisma"],
+	"ext": "ts,json",
+	"ignore": ["src/**/*.spec.ts", "src/**/*.test.ts", "node_modules"],
+	"exec": "tsx --tsconfig ./tsconfig.json ./src/index.ts",
+	"env": {
+		"NODE_ENV": "development"
+	}
+}
