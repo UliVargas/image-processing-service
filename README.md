@@ -4,7 +4,7 @@ Servicio backend construido con Node.js + TypeScript para autenticación, gesti�
 
 ## 📌 Estado del proyecto
 
-Actualmente el proyecto cubre autenticación y usuarios en producción local, con base técnica preparada para extender el dominio de imágenes y transformaciones.
+Proyecto en desarrollo activo (**alpha**). Actualmente cubre autenticación y usuarios en entorno local, con base técnica preparada para extender el dominio de imágenes y transformaciones.
 
 ## ✅ Características implementadas
 

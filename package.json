@@ -1,7 +1,7 @@
 {
 	"name": "image-processing-service",
-	"version": "1.0.0",
-	"description": "Backend API for authentication, user management, and image-processing workflows with Node.js, TypeScript, Prisma, and Docker.",
+	"version": "0.1.0",
+	"description": "Backend API (work in progress) for authentication, user management, and image-processing workflows with Node.js, TypeScript, Prisma, and Docker.",
 	"keywords": [
 		"nodejs",
 		"typescript",
@@ -25,6 +25,7 @@
 	"engines": {
 		"node": ">=20"
 	},
+	"private": true,
 	"main": "index.js",
 	"scripts": {
 		"dev": "nodemon",
