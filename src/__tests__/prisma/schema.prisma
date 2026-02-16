@@ -1,0 +1,103 @@
+generator client {
+	provider = "prisma-client"
+	output   = "../../generated/prisma-test"
+}
+
+datasource db {
+	provider = "sqlite"
+}
+
+enum ImageFormat {
+	JPEG
+	PNG
+	WEBP
+	GIF
+	AVIF
+}
+
+enum TransformationType {
+	RESIZE
+	CROP
+	ROTATE
+	WATERMARK
+	FLIP
+	MIRROR
+	COMPRESS
+	GRAYSCALE
+	SEPIA
+}
+
+model User {
+	id        String   @id @default(cuid())
+	email     String   @unique
+	username  String   @unique
+	password  String
+	name      String?
+	createdAt DateTime @default(now())
+	updatedAt DateTime @updatedAt
+
+	images   Image[]
+	sessions Session[]
+}
+
+model Session {
+	id         String    @id @default(cuid())
+	tokenHash  String    @unique
+	accessJti  String
+	userId     String
+	user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+	deviceInfo String?
+	ipAddress  String?
+	userAgent  String?
+	expiresAt  DateTime
+	lastUsedAt DateTime? @updatedAt
+	isValid    Boolean   @default(true)
+	createdAt  DateTime  @default(now())
+
+	@@index([userId])
+	@@index([tokenHash])
+	@@index([expiresAt])
+	@@index([isValid])
+}
+
+model Image {
+	id           String      @id @default(cuid())
+	originalName String
+	filename     String      @unique
+	mimeType     String
+	size         Int
+	width        Int
+	height       Int
+	format       ImageFormat
+	url          String
+	thumbnailUrl String?
+	storageKey   String      @unique
+
+	userId String
+	user   User   @relation(fields: [userId], references: [id])
+
+	transformations Transformation[]
+
+	createdAt DateTime @default(now())
+	updatedAt DateTime @updatedAt
+
+	@@index([userId])
+	@@index([createdAt])
+}
+
+model Transformation {
+	id         String             @id @default(cuid())
+	type       TransformationType
+	parameters Json
+	resultUrl  String
+	storageKey String             @unique
+	cached     Boolean            @default(false)
+
+	imageId String
+	image   Image  @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+	createdAt DateTime @default(now())
+
+	@@index([imageId])
+	@@index([cached])
+}

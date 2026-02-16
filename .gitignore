@@ -37,6 +37,7 @@ Thumbs.db
 
 # Prisma
 src/generated/
+src/__tests__/prisma/.test.sqlite
 
 # Temporary files
 tmp/
