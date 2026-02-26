@@ -47,8 +47,3 @@ objetos.
 ```
 > Las instrucciones específicas de uso y detalles arquitecturales viven en
 > archivos dentro de `docs/`.
-
-## Module name
-
-El módulo Go se llama `image-processing-service`; todas las importaciones
-internas ya están actualizadas a este nombre.
