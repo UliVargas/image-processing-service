@@ -13,7 +13,7 @@ services:
     networks:
       - image-processing-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U imageuser"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5

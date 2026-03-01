@@ -101,7 +101,7 @@ func main() {
 	})
 
 	// ==========================================
-	// Se inicia servidor en el puerto 3000
+	// Se inicia servidor en el puerto 3001
 	// ==========================================
 	addr := ":" + cfg.Port
 	log.Printf("Iniciando servidor en el puerto %s", cfg.Port)
