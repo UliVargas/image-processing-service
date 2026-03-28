@@ -1,6 +1,7 @@
 package database
 
 import (
+	"image-processing-service/internal/modules/file"
 	"image-processing-service/internal/modules/session"
 	"image-processing-service/internal/modules/user"
 	"log"
@@ -15,7 +16,7 @@ func NewConection(url string) *gorm.DB {
 		log.Fatal("Error al conectar a la base de datos:", err)
 	}
 
-	db.AutoMigrate(user.User{}, session.Session{})
+	db.AutoMigrate(user.User{}, session.Session{}, file.File{})
 
 	log.Println("Conexión a Postgres exitosa")
 	return db

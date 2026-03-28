@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"image-processing-service/internal/api/middleware"
 	"image-processing-service/internal/modules/auth"
+	"image-processing-service/internal/modules/file"
 	"image-processing-service/internal/modules/session"
 	"image-processing-service/internal/modules/user"
 	tokenManager "image-processing-service/internal/shared/auth"
@@ -56,6 +57,13 @@ func main() {
 	authHdl := auth.NewHandler(authSvc)
 
 	// ==========================================
+	// Modulo de Archivo
+	// ==========================================
+	fileRepo := file.NewRepository(db)
+	fileSvc := file.NewService(fileRepo)
+	fileHdl := file.NewHandler(fileSvc)
+
+	// ==========================================
 	// Se crear una instancia del enrutador
 	// ==========================================
 	r := chi.NewRouter()
@@ -97,6 +105,12 @@ func main() {
 			router.Patch("/{id}", userHdl.Update)
 			router.Patch("/change-password/me", userHdl.UpdatePassword)
 			router.Delete("/{id}", userHdl.Delete)
+		})
+
+		r.Route("/v1/files", func(router chi.Router) {
+			// router.Use(authMiddleware.Authenticate)
+			router.Get("/{file}", fileHdl.GetOne)
+			router.Post("/", fileHdl.Upload)
 		})
 	})
 

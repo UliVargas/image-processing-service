@@ -10,6 +10,5 @@ RUN go build -o bin/server ./cmd/api
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/bin/server ./server
-COPY .env ./
 EXPOSE 3000
 ENTRYPOINT ["./server"]
