@@ -2,6 +2,7 @@ package file
 
 import (
 	"image-processing-service/internal/shared/utils"
+	"io"
 	"net/http"
 	"strings"
 
@@ -41,12 +42,45 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := r.FormFile("file")
+	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
 		utils.HandleError(w, ErrFileRequired)
 		return
 	}
 	defer file.Close()
+
+	mimeType := fileHeader.Header.Get("Content-Type")
+	if mimeType == "" {
+		head := make([]byte, 512)
+		n, readErr := file.Read(head)
+		if readErr != nil && readErr != io.EOF {
+			utils.HandleError(w, ErrFileRead)
+			return
+		}
+		mimeType = http.DetectContentType(head[:n])
+		if _, seekErr := file.Seek(0, io.SeekStart); seekErr != nil {
+			utils.HandleError(w, ErrFileRead)
+			return
+		}
+	}
+
+	allowedTypes := map[string]bool{
+		"image/jpeg":      true,
+		"image/png":       true,
+		"application/pdf": true,
+	}
+
+	if !allowedTypes[mimeType] {
+		utils.HandleError(w, ErrInvalidFileType)
+		return
+	}
+
+	req := FileUploadRequest{
+		FileName:   fileHeader.Filename,
+		StorageKey: utils.GenerateID(),
+		MimeType:   mimeType,
+		FileSize:   fileHeader.Size,
+	}
 
 	if errs := utils.Validate(req); errs != nil {
 		utils.HandleError(w, utils.NewError(
@@ -55,6 +89,11 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 			ErrValidation.Message,
 			errs,
 		))
+		return
+	}
+
+	if err := h.service.Upload(req); err != nil {
+		utils.HandleError(w, ErrStorageUpload)
 		return
 	}
 

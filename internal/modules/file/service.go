@@ -24,8 +24,20 @@ func NewService(r Repository) Service {
 	return &service{repo: r}
 }
 
-func (s *service) Upload(req FileUploadRequest) (string, error) {
+func (s *service) Upload(req FileUploadRequest) error {
+	file := &File{
+		ID:         utils.GenerateID(),
+		FileName:   req.FileName,
+		StorageKey: req.StorageKey,
+		MimeType:   req.MimeType,
+		FileSize:   req.FileSize,
+	}
 
+	if err := s.repo.Create(file); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *service) FindOne(req string) (*File, error) {
