@@ -11,7 +11,10 @@ import (
 )
 
 func NewConection(url string) *gorm.DB {
-	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  url,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Error al conectar a la base de datos:", err)
 	}

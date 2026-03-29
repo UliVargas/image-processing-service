@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"image-processing-service/internal/api/middleware"
 	"image-processing-service/internal/modules/auth"
@@ -14,6 +15,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
 	chi_middleware "github.com/go-chi/chi/v5/middleware"
 )
@@ -27,6 +32,28 @@ func main() {
 	// Carga de variables de entorno
 	// ==========================================
 	cfg := config.NewEnv()
+
+	// ==========================================
+	// Configuración de S3
+	// ==========================================
+	awsCfg, err := awsConfig.LoadDefaultConfig(context.TODO(),
+		awsConfig.WithRegion(cfg.S3Region),
+		// Aquí pasamos las credenciales de MinIO
+		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			cfg.S3AccessKey,
+			cfg.S3SecretKey,
+			"",
+		)),
+	)
+	if err != nil {
+		log.Fatal("Error cargando configuración de AWS:", err)
+	}
+
+	// 2. Crear cliente de S3 con el Endpoint de MinIO
+	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(cfg.S3Endpoint)
+		o.UsePathStyle = cfg.S3ForcePath // IMPORTANTE para MinIO
+	})
 
 	// ==========================================
 	// Configuración de JWT
@@ -60,7 +87,8 @@ func main() {
 	// Modulo de Archivo
 	// ==========================================
 	fileRepo := file.NewRepository(db)
-	fileSvc := file.NewService(fileRepo)
+	storage := file.NewS3Storage(s3Client, cfg.S3Bucket)
+	fileSvc := file.NewService(fileRepo, storage)
 	fileHdl := file.NewHandler(fileSvc)
 
 	// ==========================================
@@ -108,8 +136,9 @@ func main() {
 		})
 
 		r.Route("/v1/files", func(router chi.Router) {
-			// router.Use(authMiddleware.Authenticate)
-			router.Get("/{file}", fileHdl.GetOne)
+			router.Use(authMiddleware.Authenticate)
+			router.Get("/", fileHdl.ListMine)
+			router.Get("/*", fileHdl.GetOne)
 			router.Post("/", fileHdl.Upload)
 		})
 	})
