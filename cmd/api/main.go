@@ -62,7 +62,7 @@ func main() {
 	// ==========================================
 	// Conexión a base de datos
 	// ==========================================
-	db := database.NewConection(cfg.DatabaseURL)
+	db := database.NewConection(cfg.DatabaseURL, cfg.EnableAutoMigrate)
 
 	// ==========================================
 	// Modulo de Usuario

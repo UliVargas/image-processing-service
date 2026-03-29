@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewConection(url string) *gorm.DB {
+func NewConection(url string, enableAutoMigrate bool) *gorm.DB {
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN:                  url,
 		PreferSimpleProtocol: true,
@@ -19,7 +19,10 @@ func NewConection(url string) *gorm.DB {
 		log.Fatal("Error al conectar a la base de datos:", err)
 	}
 
-	db.AutoMigrate(user.User{}, session.Session{}, file.File{})
+	if enableAutoMigrate {
+		db.AutoMigrate(user.User{}, session.Session{}, file.File{})
+		log.Println("GORM AutoMigrate habilitado")
+	}
 
 	log.Println("Conexión a Postgres exitosa")
 	return db
