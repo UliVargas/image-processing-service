@@ -3,17 +3,12 @@ package user
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"image-processing-service/internal/shared/auth"
 	"image-processing-service/internal/shared/utils"
 
 	"github.com/go-chi/chi/v5"
-)
-
-var (
-	ErrInvalidJSON     = utils.NewError(400, "INVALID_JSON", "El cuerpo de la petición no es un JSON válido", nil)
-	ErrInvalidIDFormat = utils.NewError(400, "INVALID_ID", "El formato del identificador proporcionado es incorrecto", nil)
-	ErrValidation      = utils.NewError(422, "VALIDATION_FAILED", "Error de validación", nil)
 )
 
 type Handler interface {
@@ -36,7 +31,7 @@ func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	if !utils.IsValidID(id) {
-		utils.HandleError(w, ErrInvalidIDFormat)
+		utils.HandleError(w, utils.ErrInvalidIDFormat)
 		return
 	}
 
@@ -50,36 +45,63 @@ func (h *handler) GetByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	users, err := h.service.GetAll()
+	const defaultPage = 1
+	const defaultLimit = 10
+	const maxLimit = 100
+
+	page := defaultPage
+	limit := defaultLimit
+
+	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
+		p, err := strconv.Atoi(pageStr)
+		if err != nil || p < 1 {
+			utils.HandleError(w, utils.ValidationError(nil))
+			return
+		}
+		page = p
+	}
+
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		l, err := strconv.Atoi(limitStr)
+		if err != nil || l < 1 || l > maxLimit {
+			utils.HandleError(w, utils.ValidationError(nil))
+			return
+		}
+		limit = l
+	}
+
+	users, total, err := h.service.GetAll(page, limit)
 	if err != nil {
 		utils.HandleError(w, err)
 		return
 	}
 
-	utils.Success(w, http.StatusOK, users)
+	if users == nil {
+		users = make([]*User, 0)
+	}
+
+	utils.Success(w, http.StatusOK, utils.PaginatedResult[*User]{
+		Data: users,
+		Meta: utils.PaginatedMeta{Total: total, Page: page, Limit: limit},
+	})
 }
 
 func (h *handler) Update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	if !utils.IsValidID(id) {
-		utils.HandleError(w, ErrInvalidIDFormat)
+		utils.HandleError(w, utils.ErrInvalidIDFormat)
 		return
 	}
 
 	var req UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.HandleError(w, ErrInvalidJSON)
+		utils.HandleError(w, utils.ErrInvalidJSON)
 		return
 	}
 
 	if errs := utils.Validate(req); errs != nil {
-		utils.HandleError(w, utils.NewError(
-			ErrValidation.StatusCode,
-			ErrValidation.Code,
-			ErrValidation.Message,
-			errs,
-		))
+		utils.HandleError(w, utils.ValidationError(errs))
 		return
 	}
 
@@ -96,23 +118,18 @@ func (h *handler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
 	authUser, _ := auth.GetAuthUser(r.Context())
 
 	if !utils.IsValidID(authUser.UserID) {
-		utils.HandleError(w, ErrInvalidIDFormat)
+		utils.HandleError(w, utils.ErrInvalidIDFormat)
 		return
 	}
 
 	var req UpdatePasswordUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.HandleError(w, ErrInvalidJSON)
+		utils.HandleError(w, utils.ErrInvalidJSON)
 		return
 	}
 
 	if errs := utils.Validate(req); errs != nil {
-		utils.HandleError(w, utils.NewError(
-			ErrValidation.StatusCode,
-			ErrValidation.Code,
-			ErrValidation.Message,
-			errs,
-		))
+		utils.HandleError(w, utils.ValidationError(errs))
 		return
 	}
 
@@ -129,7 +146,7 @@ func (h *handler) Delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	if !utils.IsValidID(id) {
-		utils.HandleError(w, ErrInvalidIDFormat)
+		utils.HandleError(w, utils.ErrInvalidIDFormat)
 		return
 	}
 
@@ -138,5 +155,5 @@ func (h *handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.Success(w, http.StatusOK, map[string]string{"message": "Usuaurio eliminado correctamente"})
+	utils.Success(w, http.StatusOK, map[string]string{"message": "Usuario eliminado correctamente"})
 }

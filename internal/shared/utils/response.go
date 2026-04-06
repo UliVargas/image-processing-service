@@ -18,6 +18,17 @@ type errorResponse struct {
 	Timestamp string      `json:"timestamp"`
 }
 
+type PaginatedMeta struct {
+	Total int64 `json:"total"`
+	Page  int   `json:"page"`
+	Limit int   `json:"limit"`
+}
+
+type PaginatedResult[T any] struct {
+	Data []T           `json:"data"`
+	Meta PaginatedMeta `json:"meta"`
+}
+
 func Success(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

@@ -9,13 +9,12 @@ import (
 
 var (
 	ErrNotFound        = utils.NewError(404, "USER_NOT_FOUND", "Usuario no encontrado", nil)
-	ErrAlreadyExists   = utils.NewError(409, "USER_ALREADY_EXISTS", "No es posible registrar este correo. Intenta con otro.", nil)
 	ErrInvalidPassword = utils.NewError(403, "INVALID_PASSWORD", "La contraseña actual no concide", nil)
 )
 
 type Service interface {
 	GetByID(id string) (*User, error)
-	GetAll() ([]*User, error)
+	GetAll(page, limit int) ([]*User, int64, error)
 	Update(id string, req UpdateUserRequest) (*User, error)
 	UpdatePassword(id string, req UpdatePasswordUserRequest) (*User, error)
 	Delete(id string) error
@@ -41,13 +40,13 @@ func (s *service) GetByID(id string) (*User, error) {
 	return user, nil
 }
 
-func (s *service) GetAll() ([]*User, error) {
-	users, err := s.repo.GetAll()
+func (s *service) GetAll(page, limit int) ([]*User, int64, error) {
+	users, total, err := s.repo.GetAll(page, limit)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return users, nil
+	return users, total, nil
 }
 
 func (s *service) Update(id string, req UpdateUserRequest) (*User, error) {
@@ -62,7 +61,7 @@ func (s *service) Update(id string, req UpdateUserRequest) (*User, error) {
 	if req.Email != nil && *req.Email != user.Email {
 		existingUser, _ := s.repo.GetByEmail(*req.Email)
 		if existingUser != nil && existingUser.ID != id {
-			return nil, ErrAlreadyExists
+			return nil, utils.ErrAlreadyExists
 		}
 
 		user.Email = *req.Email

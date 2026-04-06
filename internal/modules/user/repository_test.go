@@ -18,6 +18,7 @@ package user_test
 
 import (
 	"errors"
+	"fmt"
 	"image-processing-service/internal/modules/user"
 	"testing"
 
@@ -175,7 +176,7 @@ func TestRepository_GetByID(t *testing.T) {
 
 func TestRepository_GetAll(t *testing.T) {
 	// ----------------------------------------------------------------
-	// Caso 1: tabla vacía → slice vacío
+	// Caso 1: tabla vacía → slice vacío con total=0
 	// ----------------------------------------------------------------
 	t.Run("Debe retornar slice vacío cuando no hay usuarios", func(t *testing.T) {
 		// GIVEN: base de datos vacía
@@ -183,15 +184,16 @@ func TestRepository_GetAll(t *testing.T) {
 		repo := user.NewRepository(db)
 
 		// WHEN
-		result, err := repo.GetAll()
+		result, total, err := repo.GetAll(1, 10)
 
 		// THEN
 		assert.NoError(t, err)
 		assert.Empty(t, result)
+		assert.Equal(t, int64(0), total)
 	})
 
 	// ----------------------------------------------------------------
-	// Caso 2: múltiples usuarios → todos devueltos
+	// Caso 2: múltiples usuarios → todos devueltos con total correcto
 	// ----------------------------------------------------------------
 	t.Run("Debe retornar todos los usuarios de la base de datos", func(t *testing.T) {
 		// GIVEN: dos usuarios insertados
@@ -202,15 +204,16 @@ func TestRepository_GetAll(t *testing.T) {
 		require.NoError(t, db.Create(&user.User{ID: "id-2", Name: "Luis", Email: "luis@test.com", Password: "h2"}).Error)
 
 		// WHEN
-		result, err := repo.GetAll()
+		result, total, err := repo.GetAll(1, 10)
 
 		// THEN
 		require.NoError(t, err)
 		assert.Len(t, result, 2)
+		assert.Equal(t, int64(2), total)
 	})
 
 	// ----------------------------------------------------------------
-	// Caso 3: usuarios eliminados (soft delete) → no se incluyen
+	// Caso 3: usuarios eliminados (soft delete) → no se incluyen en total ni en data
 	// ----------------------------------------------------------------
 	t.Run("No debe incluir usuarios eliminados en el resultado", func(t *testing.T) {
 		// GIVEN: un usuario activo y uno eliminado
@@ -224,12 +227,39 @@ func TestRepository_GetAll(t *testing.T) {
 		require.NoError(t, db.Delete(eliminado).Error) // soft delete
 
 		// WHEN
-		result, err := repo.GetAll()
+		result, total, err := repo.GetAll(1, 10)
 
 		// THEN: solo el usuario activo aparece
 		require.NoError(t, err)
 		assert.Len(t, result, 1)
+		assert.Equal(t, int64(1), total)
 		assert.Equal(t, "id-activo", result[0].ID)
+	})
+
+	// ----------------------------------------------------------------
+	// Caso 4: LIMIT y OFFSET funcionan correctamente
+	// ----------------------------------------------------------------
+	t.Run("Debe respetar el LIMIT y OFFSET según page y limit", func(t *testing.T) {
+		// GIVEN: 5 usuarios insertados
+		db := newMemoryDB(t)
+		repo := user.NewRepository(db)
+
+		for i := 1; i <= 5; i++ {
+			require.NoError(t, db.Create(&user.User{
+				ID:       fmt.Sprintf("id-%d", i),
+				Name:     fmt.Sprintf("User%d", i),
+				Email:    fmt.Sprintf("u%d@test.com", i),
+				Password: "h",
+			}).Error)
+		}
+
+		// WHEN: página 2 con limite 2 → usuarios 3 y 4
+		result, total, err := repo.GetAll(2, 2)
+
+		// THEN
+		require.NoError(t, err)
+		assert.Equal(t, int64(5), total) // total siempre refleja el real
+		assert.Len(t, result, 2)         // solo 2 por página
 	})
 }
 

@@ -36,7 +36,7 @@ import (
 // test pueda redefinir el comportamiento sin crear una nueva instancia.
 type mockService struct {
 	GetByIDFn        func(id string) (*user.User, error)
-	GetAllFn         func() ([]*user.User, error)
+	GetAllFn         func(page, limit int) ([]*user.User, int64, error)
 	UpdateFn         func(id string, req user.UpdateUserRequest) (*user.User, error)
 	UpdatePasswordFn func(id string, req user.UpdatePasswordUserRequest) (*user.User, error)
 	DeleteFn         func(id string) error
@@ -45,8 +45,8 @@ type mockService struct {
 func (m *mockService) GetByID(id string) (*user.User, error) {
 	return m.GetByIDFn(id)
 }
-func (m *mockService) GetAll() ([]*user.User, error) {
-	return m.GetAllFn()
+func (m *mockService) GetAll(page, limit int) ([]*user.User, int64, error) {
+	return m.GetAllFn(page, limit)
 }
 func (m *mockService) Update(id string, req user.UpdateUserRequest) (*user.User, error) {
 	return m.UpdateFn(id, req)
@@ -212,8 +212,8 @@ func TestHandler_GetAll(t *testing.T) {
 	// ----------------------------------------------------------------
 	t.Run("Debe retornar 500 cuando el servicio falla", func(t *testing.T) {
 		// GIVEN
-		svc.GetAllFn = func() ([]*user.User, error) {
-			return nil, errors.New("db down")
+		svc.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			return nil, 0, errors.New("db down")
 		}
 
 		req := newRequest(http.MethodGet, "/users", "", nil)
@@ -227,12 +227,15 @@ func TestHandler_GetAll(t *testing.T) {
 	})
 
 	// ----------------------------------------------------------------
-	// Caso 2: lista vacía → 200 con array vacío
+	// Caso 2: sin params → defaults aplicados (page=1, limit=10)
 	// ----------------------------------------------------------------
-	t.Run("Debe retornar 200 con lista vacía cuando no hay usuarios", func(t *testing.T) {
+	t.Run("Debe aplicar defaults page=1 y limit=10 cuando no hay params", func(t *testing.T) {
 		// GIVEN
-		svc.GetAllFn = func() ([]*user.User, error) {
-			return []*user.User{}, nil
+		var capturedPage, capturedLimit int
+		svc.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			capturedPage = page
+			capturedLimit = limit
+			return []*user.User{}, 0, nil
 		}
 
 		req := newRequest(http.MethodGet, "/users", "", nil)
@@ -243,25 +246,31 @@ func TestHandler_GetAll(t *testing.T) {
 
 		// THEN
 		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, 1, capturedPage)
+		assert.Equal(t, 10, capturedLimit)
+
 		body := decodeResponse(t, w)
-		assert.True(t, body["success"].(bool))
-		data := body["data"].([]interface{})
-		assert.Empty(t, data)
+		dataObj := body["data"].(map[string]interface{})
+		meta := dataObj["meta"].(map[string]interface{})
+		assert.Equal(t, float64(1), meta["page"])
+		assert.Equal(t, float64(10), meta["limit"])
+		assert.Equal(t, float64(0), meta["total"])
 	})
 
 	// ----------------------------------------------------------------
-	// Caso 3: múltiples usuarios → 200 con todos
+	// Caso 3: params explícitos → se pasan al servicio
 	// ----------------------------------------------------------------
-	t.Run("Debe retornar 200 con todos los usuarios", func(t *testing.T) {
+	t.Run("Debe pasar page y limit explícitos al servicio", func(t *testing.T) {
 		// GIVEN
-		svc.GetAllFn = func() ([]*user.User, error) {
-			return []*user.User{
-				{ID: "id-1", Name: "Ana", Email: "ana@test.com"},
-				{ID: "id-2", Name: "Luis", Email: "luis@test.com"},
-			}, nil
+		usuarios := []*user.User{
+			{ID: "id-1", Name: "Ana", Email: "ana@test.com"},
+			{ID: "id-2", Name: "Luis", Email: "luis@test.com"},
+		}
+		svc.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			return usuarios, 10, nil
 		}
 
-		req := newRequest(http.MethodGet, "/users", "", nil)
+		req := newRequest(http.MethodGet, "/users?page=2&limit=5", "", nil)
 		w := httptest.NewRecorder()
 
 		// WHEN
@@ -270,8 +279,67 @@ func TestHandler_GetAll(t *testing.T) {
 		// THEN
 		assert.Equal(t, http.StatusOK, w.Code)
 		body := decodeResponse(t, w)
-		data := body["data"].([]interface{})
+		dataObj := body["data"].(map[string]interface{})
+		data := dataObj["data"].([]interface{})
+		meta := dataObj["meta"].(map[string]interface{})
 		assert.Len(t, data, 2)
+		assert.Equal(t, float64(10), meta["total"])
+		assert.Equal(t, float64(2), meta["page"])
+		assert.Equal(t, float64(5), meta["limit"])
+	})
+
+	// ----------------------------------------------------------------
+	// Caso 4: limit=0 → 422 VALIDATION_FAILED
+	// ----------------------------------------------------------------
+	t.Run("Debe retornar 422 cuando limit es 0", func(t *testing.T) {
+		// GIVEN
+		req := newRequest(http.MethodGet, "/users?limit=0", "", nil)
+		w := httptest.NewRecorder()
+
+		// WHEN
+		h.GetAll(w, req)
+
+		// THEN
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+		body := decodeResponse(t, w)
+		errObj := body["error"].(map[string]interface{})
+		assert.Equal(t, "VALIDATION_FAILED", errObj["code"])
+	})
+
+	// ----------------------------------------------------------------
+	// Caso 5: limit=200 → 422 VALIDATION_FAILED (fuera de rango)
+	// ----------------------------------------------------------------
+	t.Run("Debe retornar 422 cuando limit excede 100", func(t *testing.T) {
+		// GIVEN
+		req := newRequest(http.MethodGet, "/users?limit=200", "", nil)
+		w := httptest.NewRecorder()
+
+		// WHEN
+		h.GetAll(w, req)
+
+		// THEN
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+		body := decodeResponse(t, w)
+		errObj := body["error"].(map[string]interface{})
+		assert.Equal(t, "VALIDATION_FAILED", errObj["code"])
+	})
+
+	// ----------------------------------------------------------------
+	// Caso 6: params no numéricos → 422 VALIDATION_FAILED
+	// ----------------------------------------------------------------
+	t.Run("Debe retornar 422 cuando page o limit no son numéricos", func(t *testing.T) {
+		// GIVEN
+		req := newRequest(http.MethodGet, "/users?page=abc&limit=xyz", "", nil)
+		w := httptest.NewRecorder()
+
+		// WHEN
+		h.GetAll(w, req)
+
+		// THEN
+		assert.Equal(t, http.StatusUnprocessableEntity, w.Code)
+		body := decodeResponse(t, w)
+		errObj := body["error"].(map[string]interface{})
+		assert.Equal(t, "VALIDATION_FAILED", errObj["code"])
 	})
 }
 
@@ -371,7 +439,7 @@ func TestHandler_Update(t *testing.T) {
 	t.Run("Debe retornar 409 cuando el email ya está en uso", func(t *testing.T) {
 		// GIVEN
 		svc.UpdateFn = func(id string, req user.UpdateUserRequest) (*user.User, error) {
-			return nil, user.ErrAlreadyExists
+			return nil, utils.ErrAlreadyExists
 		}
 
 		nuevoEmail := "ocupado@test.com"

@@ -27,7 +27,7 @@ type mockRepo struct {
 	CreateFn         func(u *user.User) error
 	GetByEmailFn     func(email string) (*user.User, error)
 	GetByIDFn        func(id string) (*user.User, error)
-	GetAllFn         func() ([]*user.User, error)
+	GetAllFn         func(page, limit int) ([]*user.User, int64, error)
 	UpdateFn         func(u *user.User) error
 	UpdatePasswordFn func(u *user.User) error
 	DeleteFn         func(id string) error
@@ -36,7 +36,9 @@ type mockRepo struct {
 func (m *mockRepo) Create(u *user.User) error                   { return m.CreateFn(u) }
 func (m *mockRepo) GetByEmail(email string) (*user.User, error) { return m.GetByEmailFn(email) }
 func (m *mockRepo) GetByID(id string) (*user.User, error)       { return m.GetByIDFn(id) }
-func (m *mockRepo) GetAll() ([]*user.User, error)               { return m.GetAllFn() }
+func (m *mockRepo) GetAll(page, limit int) ([]*user.User, int64, error) {
+	return m.GetAllFn(page, limit)
+}
 func (m *mockRepo) Update(u *user.User) error                   { return m.UpdateFn(u) }
 func (m *mockRepo) UpdatePassword(u *user.User) error           { return m.UpdatePasswordFn(u) }
 func (m *mockRepo) Delete(id string) error                      { return m.DeleteFn(id) }
@@ -118,16 +120,17 @@ func TestService_GetAll(t *testing.T) {
 	// ----------------------------------------------------------------
 	t.Run("Debe propagar el error cuando el repositorio falla", func(t *testing.T) {
 		// GIVEN
-		repo.GetAllFn = func() ([]*user.User, error) {
-			return nil, errors.New("timeout")
+		repo.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			return nil, 0, errors.New("timeout")
 		}
 
 		// WHEN
-		res, err := service.GetAll()
+		res, total, err := service.GetAll(1, 10)
 
 		// THEN
 		assert.EqualError(t, err, "timeout")
 		assert.Nil(t, res)
+		assert.Zero(t, total)
 	})
 
 	// ----------------------------------------------------------------
@@ -135,38 +138,60 @@ func TestService_GetAll(t *testing.T) {
 	// ----------------------------------------------------------------
 	t.Run("Debe retornar slice vacío cuando no hay usuarios", func(t *testing.T) {
 		// GIVEN
-		repo.GetAllFn = func() ([]*user.User, error) {
-			return []*user.User{}, nil
+		repo.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			return []*user.User{}, 0, nil
 		}
 
 		// WHEN
-		res, err := service.GetAll()
+		res, total, err := service.GetAll(1, 10)
 
 		// THEN
 		assert.NoError(t, err)
 		assert.Empty(t, res)
+		assert.Equal(t, int64(0), total)
 	})
 
 	// ----------------------------------------------------------------
-	// Caso 3: múltiples usuarios → todos devueltos
+	// Caso 3: múltiples usuarios → todos devueltos con total correcto
 	// ----------------------------------------------------------------
-	t.Run("Debe retornar todos los usuarios del repositorio", func(t *testing.T) {
+	t.Run("Debe retornar usuarios y total del repositorio", func(t *testing.T) {
 		// GIVEN
 		usuarios := []*user.User{
 			{ID: "id-1", Name: "Ana"},
 			{ID: "id-2", Name: "Luis"},
 		}
-		repo.GetAllFn = func() ([]*user.User, error) {
-			return usuarios, nil
+		repo.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			return usuarios, 2, nil
 		}
 
 		// WHEN
-		res, err := service.GetAll()
+		res, total, err := service.GetAll(1, 10)
 
 		// THEN
 		assert.NoError(t, err)
 		assert.Len(t, res, 2)
+		assert.Equal(t, int64(2), total)
 		assert.Equal(t, usuarios, res)
+	})
+
+	// ----------------------------------------------------------------
+	// Caso 4: page y limit se delegan al repositorio
+	// ----------------------------------------------------------------
+	t.Run("Debe pasar page y limit al repositorio", func(t *testing.T) {
+		// GIVEN
+		var capturedPage, capturedLimit int
+		repo.GetAllFn = func(page, limit int) ([]*user.User, int64, error) {
+			capturedPage = page
+			capturedLimit = limit
+			return []*user.User{}, 0, nil
+		}
+
+		// WHEN
+		service.GetAll(3, 25)
+
+		// THEN
+		assert.Equal(t, 3, capturedPage)
+		assert.Equal(t, 25, capturedLimit)
 	})
 }
 
@@ -236,7 +261,7 @@ func TestService_Update(t *testing.T) {
 		res, err := service.Update(userId, req)
 
 		// THEN: el servicio detecta el conflicto y retorna el error adecuado
-		assert.ErrorIs(t, err, user.ErrAlreadyExists)
+		assert.ErrorIs(t, err, utils.ErrAlreadyExists)
 		assert.Nil(t, res)
 	})
 

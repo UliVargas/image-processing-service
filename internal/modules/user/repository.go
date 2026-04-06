@@ -10,7 +10,7 @@ type Repository interface {
 	Create(user *User) error
 	GetByEmail(email string) (*User, error)
 	GetByID(id string) (*User, error)
-	GetAll() ([]*User, error)
+	GetAll(page, limit int) ([]*User, int64, error)
 	Update(user *User) error
 	UpdatePassword(user *User) error
 	Delete(id string) error
@@ -53,14 +53,21 @@ func (r *repository) GetByID(id string) (*User, error) {
 	return &user, nil
 }
 
-func (r *repository) GetAll() ([]*User, error) {
+func (r *repository) GetAll(page, limit int) ([]*User, int64, error) {
 	var users []*User
+	var total int64
 
-	if err := r.db.Find(&users).Error; err != nil {
-		return nil, err
+	offset := (page - 1) * limit
+
+	if err := r.db.Model(&User{}).Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return users, nil
+	if err := r.db.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }
 
 func (r *repository) Update(user *User) error {
