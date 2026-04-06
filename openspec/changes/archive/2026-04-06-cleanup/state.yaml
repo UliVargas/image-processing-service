@@ -1,0 +1,20 @@
+phase: verify
+status: done
+change: cleanup
+last_updated: "2026-04-06"
+completed_phases:
+  - propose
+  - spec
+  - design
+  - tasks
+  - apply
+  - verify
+next_phase: archive
+verdict: PASS WITH WARNINGS
+artifacts:
+  proposal: openspec/changes/cleanup/proposal.md
+  specs:
+    - openspec/changes/cleanup/specs/user-list-pagination/spec.md
+  design: openspec/changes/cleanup/design.md
+  tasks: openspec/changes/cleanup/tasks.md
+  verify_report: openspec/changes/cleanup/verify-report.md

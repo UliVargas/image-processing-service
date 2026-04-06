@@ -1,0 +1,12 @@
+phase: archive
+status: done
+change: error-handling
+last_updated: "2026-04-06"
+completed_phases:
+  - propose
+  - apply
+  - archive
+next_phase: null
+verdict: PASS
+artifacts:
+  proposal: openspec/changes/error-handling/proposal.md
