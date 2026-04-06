@@ -10,23 +10,22 @@ import (
 )
 
 var (
-	ErrInvalidToken    = utils.NewError(401, "INVALID_TOKEN", "Token invalido", nil)
-	ErrInvalidIDFormat = utils.NewError(400, "INVALID_ID", "El formato del identificador proporcionado es incorrecto", nil)
+	ErrInvalidToken = utils.NewError(401, "INVALID_TOKEN", "Token invalido", nil)
 )
 
-type authMiddleware struct {
+type AuthMiddleware struct {
 	tokenManager *auth.TokenManager
 	sessionSrv   session.Service
 }
 
-func NewAuthMiddleware(tm *auth.TokenManager, sess session.Service) *authMiddleware {
-	return &authMiddleware{
+func NewAuthMiddleware(tm *auth.TokenManager, sess session.Service) *AuthMiddleware {
+	return &AuthMiddleware{
 		tokenManager: tm,
 		sessionSrv:   sess,
 	}
 }
 
-func (m *authMiddleware) Authenticate(next http.Handler) http.Handler {
+func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := m.extractTokenFromHeader(r)
 		if err != nil {
@@ -48,12 +47,12 @@ func (m *authMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		userID := claims.UserID
 		if !utils.IsValidID(userID) {
-			utils.HandleError(w, ErrInvalidIDFormat)
+			utils.HandleError(w, utils.ErrInvalidIDFormat)
 			return
 		}
 		jti := claims.ID
 		if !utils.IsValidID(jti) {
-			utils.HandleError(w, ErrInvalidIDFormat)
+			utils.HandleError(w, utils.ErrInvalidIDFormat)
 			return
 		}
 
@@ -67,7 +66,7 @@ func (m *authMiddleware) Authenticate(next http.Handler) http.Handler {
 	})
 }
 
-func (m *authMiddleware) extractTokenFromHeader(r *http.Request) (string, error) {
+func (m *AuthMiddleware) extractTokenFromHeader(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return "", ErrInvalidToken

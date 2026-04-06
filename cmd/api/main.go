@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	internalapi "image-processing-service/internal/api"
 	"image-processing-service/internal/api/middleware"
 	"image-processing-service/internal/modules/auth"
 	"image-processing-service/internal/modules/file"
@@ -19,13 +19,7 @@ import (
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/go-chi/chi/v5"
-	chi_middleware "github.com/go-chi/chi/v5/middleware"
 )
-
-type Response struct {
-	Message string `json:"message"`
-}
 
 func main() {
 	// ==========================================
@@ -38,7 +32,6 @@ func main() {
 	// ==========================================
 	awsCfg, err := awsConfig.LoadDefaultConfig(context.TODO(),
 		awsConfig.WithRegion(cfg.S3Region),
-		// Aquí pasamos las credenciales de MinIO
 		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
 			cfg.S3AccessKey,
 			cfg.S3SecretKey,
@@ -49,104 +42,41 @@ func main() {
 		log.Fatal("Error cargando configuración de AWS:", err)
 	}
 
-	// 2. Crear cliente de S3 con el Endpoint de MinIO
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(cfg.S3Endpoint)
-		o.UsePathStyle = cfg.S3ForcePath // IMPORTANTE para MinIO
+		o.UsePathStyle = cfg.S3ForcePath
 	})
 
 	// ==========================================
-	// Configuración de JWT
+	// Configuración de JWT y base de datos
 	// ==========================================
 	m := tokenManager.NewTokenManager(cfg.SecretKey, time.Hour*24*7)
-	// ==========================================
-	// Conexión a base de datos
-	// ==========================================
 	db := database.NewConection(cfg.DatabaseURL, cfg.EnableAutoMigrate)
 
 	// ==========================================
-	// Modulo de Usuario
+	// Wiring de módulos
 	// ==========================================
 	userRepo := user.NewRepository(db)
 	userSvc := user.NewService(userRepo)
 	userHdl := user.NewHandler(userSvc)
 
-	// ==========================================
-	// Modulo de Sesion
-	// ==========================================
 	sessionRepo := session.NewRepository(db)
 	sessionSvc := session.NewService(sessionRepo)
 
-	// ==========================================
-	// Modulo de Auth
-	// ==========================================
 	authSvc := auth.NewService(userRepo, sessionSvc, m)
 	authHdl := auth.NewHandler(authSvc)
 
-	// ==========================================
-	// Modulo de Archivo
-	// ==========================================
 	fileRepo := file.NewRepository(db)
 	storage := file.NewS3Storage(s3Client, cfg.S3Bucket)
 	fileSvc := file.NewService(fileRepo, storage)
 	fileHdl := file.NewHandler(fileSvc)
 
-	// ==========================================
-	// Se crear una instancia del enrutador
-	// ==========================================
-	r := chi.NewRouter()
+	authMW := middleware.NewAuthMiddleware(m, sessionSvc)
 
 	// ==========================================
-	// Se dan de alta middlewares para autenticación, la impresión de rutas visitadas y el recuperador.
-	// Este último por si hay un error no se detenga el servidor
-	// ==========================================
-	r.Use(chi_middleware.Logger)
-	r.Use(chi_middleware.Recoverer)
-	authMiddleware := middleware.NewAuthMiddleware(m, sessionSvc)
-
-	// ==========================================
-	// Se registra la ruta
-	// ==========================================
-	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
-		res := Response{Message: "pong"}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(res)
-	})
-
-	// ==========================================
-	// Registro de rutas de usuarios
-	// ==========================================
-	r.Route("/api", func(r chi.Router) {
-		r.Route("/v1/auth", func(router chi.Router) {
-			router.Post("/signup", authHdl.SignUp)
-			router.Post("/signin", authHdl.SignIn)
-			router.With(authMiddleware.Authenticate).Post("/signout", authHdl.SignOut)
-			router.Post("/renew-session", authHdl.RenewSession)
-		})
-
-		r.Route("/v1/users", func(router chi.Router) {
-			router.Use(authMiddleware.Authenticate)
-			router.Get("/", userHdl.GetAll)
-
-			router.Get("/{id}", userHdl.GetByID)
-			router.Patch("/{id}", userHdl.Update)
-			router.Patch("/change-password/me", userHdl.UpdatePassword)
-			router.Delete("/{id}", userHdl.Delete)
-		})
-
-		r.Route("/v1/files", func(router chi.Router) {
-			router.Use(authMiddleware.Authenticate)
-			router.Get("/", fileHdl.ListMine)
-			router.Get("/*", fileHdl.GetOne)
-			router.Post("/", fileHdl.Upload)
-		})
-	})
-
-	// ==========================================
-	// Se inicia servidor en el puerto 3001
+	// Servidor
 	// ==========================================
 	addr := ":" + cfg.Port
 	log.Printf("Iniciando servidor en el puerto %s", cfg.Port)
-	http.ListenAndServe(addr, r)
+	http.ListenAndServe(addr, internalapi.NewRouter(authMW, authHdl, userHdl, fileHdl))
 }

@@ -14,7 +14,6 @@ import (
 
 var (
 	ErrNotFound           = utils.NewError(404, "SESSION_NOT_FOUND", "Sesión no encontrada", nil)
-	ErrAlreadyExists      = utils.NewError(409, "USER_ALREADY_EXISTS", "No es posible registrar este correo. Intenta con otro.", nil)
 	ErrInvalidCredentials = utils.NewError(401, "INVALID_CREDENTIALS", "Credenciales inválidas", nil)
 )
 
@@ -38,7 +37,7 @@ func NewService(r user.Repository, sSrv session.Service, m *auth.TokenManager) S
 func (s *service) SignUp(req RegisterRequest) (*user.User, error) {
 	existingUser, _ := s.userRepo.GetByEmail(req.Email)
 	if existingUser != nil {
-		return nil, ErrAlreadyExists
+		return nil, utils.ErrAlreadyExists
 	}
 
 	hashedPassword, err := utils.HashPassword(req.Password)

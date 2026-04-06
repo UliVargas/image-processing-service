@@ -2,17 +2,9 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"image-processing-service/internal/shared/auth"
 	"image-processing-service/internal/shared/utils"
-	"log"
 	"net/http"
-)
-
-var (
-	ErrInvalidJSON     = utils.NewError(400, "INVALID_JSON", "El cuerpo de la petición no es un JSON válido", nil)
-	ErrInvalidIDFormat = utils.NewError(400, "INVALID_ID", "El formato del identificador proporcionado es incorrecto", nil)
-	ErrValidation      = utils.NewError(422, "VALIDATION_FAILED", "Error de validación", nil)
 )
 
 type Handler interface {
@@ -34,22 +26,16 @@ func (h *handler) SignUp(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.HandleError(w, ErrInvalidJSON)
+		utils.HandleError(w, utils.ErrInvalidJSON)
 		return
 	}
 
 	if errs := utils.Validate(req); errs != nil {
-		utils.HandleError(w, utils.NewError(
-			ErrValidation.StatusCode,
-			ErrValidation.Code,
-			ErrValidation.Message,
-			errs,
-		))
+		utils.HandleError(w, utils.ValidationError(errs))
 		return
 	}
 
 	user, err := h.service.SignUp(req)
-	log.Println(err)
 	if err != nil {
 		utils.HandleError(w, err)
 		return
@@ -62,17 +48,12 @@ func (h *handler) SignIn(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.HandleError(w, ErrInvalidJSON)
+		utils.HandleError(w, utils.ErrInvalidJSON)
 		return
 	}
 
 	if errs := utils.Validate(req); errs != nil {
-		utils.HandleError(w, utils.NewError(
-			ErrValidation.StatusCode,
-			ErrValidation.Code,
-			ErrValidation.Message,
-			errs,
-		))
+		utils.HandleError(w, utils.ValidationError(errs))
 		return
 	}
 
@@ -87,7 +68,6 @@ func (h *handler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) SignOut(w http.ResponseWriter, r *http.Request) {
 	authUser, _ := auth.GetAuthUser(r.Context())
-	fmt.Println("authUser", authUser)
 
 	if err := h.service.SignOut(authUser.JTI); err != nil {
 		utils.HandleError(w, err)
@@ -101,17 +81,12 @@ func (h *handler) RenewSession(w http.ResponseWriter, r *http.Request) {
 	var req RenewSessionRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.HandleError(w, ErrInvalidJSON)
+		utils.HandleError(w, utils.ErrInvalidJSON)
 		return
 	}
 
 	if errs := utils.Validate(req); errs != nil {
-		utils.HandleError(w, utils.NewError(
-			ErrValidation.StatusCode,
-			ErrValidation.Code,
-			ErrValidation.Message,
-			errs,
-		))
+		utils.HandleError(w, utils.ValidationError(errs))
 		return
 	}
 

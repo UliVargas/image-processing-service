@@ -31,7 +31,6 @@ type handler struct {
 }
 
 var (
-	ErrValidation      = utils.NewError(422, "VALIDATION_FAILED", "Error de validación", nil)
 	ErrFileRequired    = utils.NewError(400, "FILE_REQUIRED", "No se ha proporcionado ningún archivo en la petición", nil)
 	ErrFileTooLarge    = utils.NewError(413, "FILE_TOO_LARGE", "El archivo excede el tamaño máximo permitido (10MB)", nil)
 	ErrInvalidFileType = utils.NewError(415, "UNSUPPORTED_FILE_TYPE", "El tipo de archivo no está permitido (solo JPG, PNG, GIF o WEBP)", nil)
@@ -142,12 +141,7 @@ func (h *handler) Upload(w http.ResponseWriter, r *http.Request) {
 	req.UserID = authUser.UserID
 
 	if errs := utils.Validate(req); errs != nil {
-		utils.HandleError(w, utils.NewError(
-			ErrValidation.StatusCode,
-			ErrValidation.Code,
-			ErrValidation.Message,
-			errs,
-		))
+		utils.HandleError(w, utils.ValidationError(errs))
 		return
 	}
 
